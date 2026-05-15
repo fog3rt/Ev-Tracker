@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EV Full Range Diagnostic Tracker</title>
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #e0f2fe 0%, #e0f7fa 50%, #bae6fd 100%);
+            --card-glass: rgba(255, 255, 255, 0.75);
+            --card-border: rgba(255, 255, 255, 0.6);
+            --input-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --primary: #2563eb;
+            --primary-glow: rgba(37, 99, 235, 0.15);
+            --success: #16a34a;
+            --success-glow: rgba(22, 163, 74, 0.15);
+            --warning-bg: rgba(245, 158, 11, 0.08);
+            --warning-border: rgba(245, 158, 11, 0.3);
+            --warning-text: #b45309;
+            --danger: #dc2626;
+            --border-color: #cbd5e1;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #e0f7fa 50%, #bae6fd 100%);
+            background-size: 400% 400%;
+            animation: gradientBG 12s ease infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .card {
+            background: var(--card-glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 40px 32px;
+            border-radius: 28px;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08), 0 0 30px rgba(37, 99, 235, 0.04);
+            width: 100%;
+            max-width: 560px;
+            text-align: center;
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 10%;
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), var(--success), transparent);
+        }
+
+        h1 {
+            color: var(--text-main);
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .dot-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.04);
+            padding: 22px;
+            border-radius: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(15, 23, 42, 0.06);
+        }
+
+        .dot {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #ffffff;
+            border: 1px solid var(--border-color);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        }
+
+        .dot.completed {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            border-color: #4ade80;
+            color: #ffffff;
+            box-shadow: 0 4px 10px var(--success-glow);
+        }
+
+        .dot.active {
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            border-color: #60a5fa;
+            color: #ffffff;
+            box-shadow: 0 4px 12px var(--primary-glow);
+            animation: pulse 2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 4px 10px var(--primary-glow); }
+            50% { transform: scale(1.08); box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4); }
+        }
+
+        .range-inputs-container {
+            background: rgba(15, 23, 42, 0.03);
+            border: 1px solid rgba(15, 23, 42, 0.06);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .range-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 14px;
+            max-height: 260px;
+            overflow-y: auto;
+            padding-right: 6px;
+        }
+
+        .day-row {
+            display: grid;
+            grid-template-columns: 55px 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            background: #ffffff;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+        }
+
+        .day-row.active-row {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px rgba(37, 99, 235, 0.1);
+            background: rgba(37, 99, 235, 0.02);
+        }
+
+        .day-label {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .sub-field {
+            display: flex;
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 6px 10px;
+            transition: all 0.2s;
+        }
+
+        .day-row.active-row .sub-field {
+            background: #ffffff;
+        }
+
+        .day-row.active-row .sub-field:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 6px rgba(37, 99, 235, 0.15);
+        }
+
+        .sub-field label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-right: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .sub-field input {
+            border: none;
+            outline: none;
+            width: 100%;
+            text-align: right;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-main);
+            background: transparent;
+            padding: 2px 0;
+        }
+
+        .sub-field span {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .sub-field input:disabled {
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+
+        .metric-box {
+            background: #ffffff;
+            padding: 16px 18px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.01);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .metric-box.editable {
+            cursor: pointer;
+        }
+        .metric-box.editable:hover {
+            background: #f8fafc;
+            border-color: var(--primary);
+        }
+
+        .capacity-input-wrapper {
+            display: flex;
+            align-items: baseline;
+            margin-top: 6px;
+        }
+
+        .capacity-input-wrapper input, .charge-custom-wrapper input, .datetime-wrapper input {
+            background: transparent;
+            border: none;
+            outline: none;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--primary);
+            width: 75px;
+            padding: 0;
+            font-family: inherit;
+        }
+
+        .capacity-input-wrapper input:focus, .charge-custom-wrapper input:focus, .datetime-wrapper input:focus {
+            background: #f1f5f9;
+            box-shadow: 0 0 0 2px var(--primary);
+            border-radius: 6px;
+            padding: 0 4px;
+        }
+
+        .capacity-input-wrapper span {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-left: 4px;
+        }
+
+        .charge-custom-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+        }
+
+        .charge-custom-wrapper input {
+            color: var(--success);
+            width: 50px;
+            text-align: center;
+        }
+
+        .charge-custom-wrapper span {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        /* Date & 24h Time Display Block Styles */
+        .datetime-container {
+            grid-column: span 2;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: left;
+        }
+
+        .datetime-wrapper {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        .datetime-block {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .datetime-value {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.3px;
+            margin-top: 2px;
+        }
+
+        .metric-box.full-width {
+            grid-column: span 2;
+            background-color: var(--warning-bg);
+            border-left: 4px solid var(--warning-border);
+            border-color: rgba(245, 158, 11, 0.1);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .warning-text {
+            font-size: 0.85rem;
+            color: var(--warning-text);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        button {
+            border: none;
+            padding: 18px;
+            border-radius: 16px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
+            letter-spacing: 0.3px;
+        }
+
+        #startBtn {
+            background: linear-gradient(90deg, #1d4ed8, #2563eb);
+            color: white;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+        }
+
+        #startBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        #logDayBtn {
+            background: linear-gradient(90deg, #16a34a, #22c55e);
+            color: white;
+            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
+        }
+
+        #logDayBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+        }
+
+        #logDayBtn:disabled {
+            background: #cbd5e1 !important;
+            color: #94a3b8 !important;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #resetBtn {
+            background-color: transparent;
+            color: var(--danger);
+            border: 1.5px solid rgba(220, 38, 38, 0.4);
+            padding: 14px;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        #resetBtn:hover {
+            background-color: rgba(220, 38, 38, 0.05);
+            border-color: var(--danger);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+        
+        .history-log {
+            margin-top: 28px;
+            text-align: left;
+            border-top: 1px solid rgba(15, 23, 42, 0.08);
+            padding-top: 24px;
+        }
+
+        #historyContainer {
+            max-height: 180px;
+            overflow-y: auto;
+            margin-top: 12px;
+            padding-right: 6px;
+        }
+        
+        .history-item {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            padding: 10px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #ffffff;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .history-item span {
+            font-weight: 600;
+        }
+
+        .range-grid::-webkit-scrollbar, #historyContainer::-webkit-scrollbar {
+            width: 5px;
+        }
+        .range-grid::-webkit-scrollbar-track, #historyContainer::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .range-grid::-webkit-scrollbar-thumb, #historyContainer::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>BMS Balancing Cycle</h1>
+        <p class="subtitle" id="status-text">Ready to track full capacity cell calibration.</p>
+
+        <div class="dot-container" id="dotContainer"></div>
+
+        <div id="rangeLogSection" class="range-inputs-container hidden">
+            <div class="metric-label">Configuration Interval Telemetry</div>
+            <div class="range-grid" id="rangeGridContainer"></div>
+        </div>
+
+        <div class="metrics">
+            <div class="metric-box editable" onclick="focusCapacityInput()">
+                <div class="metric-label">Pack Capacity</div>
+                <div class="capacity-input-wrapper">
+                    <input type="number" id="capacityInput" step="0.1" min="1" placeholder="53.6">
+                    <span>kWh</span>
+                </div>
+            </div>
+            <div class="metric-box editable" onclick="focusChargeStartInput()">
+                <div class="metric-label">Target Charge</div>
+                <div class="charge-custom-wrapper">
+                    <input type="number" id="chargeStartInput" min="0" max="100" placeholder="0">%
+                    <span>→</span>
+                    <input type="number" id="chargeEndInput" min="0" max="100" placeholder="100">%
+                </div>
+            </div>
+
+            <!-- Date (D/M/Y) & Time (24h) Telemetry Reference Box -->
+            <div class="datetime-container">
+                <div class="datetime-block">
+                    <div class="metric-label">Diagnostic Date (D/M/Y)</div>
+                    <div class="datetime-value" id="currentDateDisplay">--/--/----</div>
+                </div>
+                <div class="datetime-block" style="text-align: right;">
+                    <div class="metric-label">Timestamp (24H)</div>
+                    <div class="datetime-value" id="currentTimeDisplay">00:00:00</div>
+                </div>
+            </div>
+
+            <div class="metric-box full-width">
+                <div class="metric-label">Calibration Advisory</div>
+                <div class="warning-text">Full top-balancing log. Avoid leaving the pack sitting at 100% SOC for prolonged periods to mitigate degradation.</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn" onclick="startTracking()">Initialize 10-Day Full Cycle</button>
+            <button id="logDayBtn" class="hidden" onclick="logDailyMetrics()">Confirm Day Entry</button>
+            <button id="resetBtn" class="hidden" onclick="resetTracking()">Reset Cycle Logs</button>
+        </div>
+
+        <div id="historySection" class="history-log hidden">
+            <div class="metric-label">Full Range History</div>
+            <div id="historyContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOTAL_DAYS = 10;
+        const DEFAULT_CAPACITY = "53.6";
+        const DEFAULT_START_CHARGE = "0";
+        const DEFAULT_END_CHARGE = "100";
+        
+        const container = document.getElementById('dotContainer');
+        const statusText = document.getElementById('status-text');
+        const startBtn = document.getElementById('startBtn');
+        const logDayBtn = document.getElementById('logDayBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const rangeLogSection = document.getElementById('rangeLogSection');
+        const rangeGridContainer = document.getElementById('rangeGridContainer');
+        const historySection = document.getElementById('historySection');
+        const historyContainer = document.getElementById('historyContainer');
+        const capacityInput = document.getElementById('capacityInput');
+        const chargeStartInput = document.getElementById('chargeStartInput');
+        const chargeEndInput = document.getElementById('chargeEndInput');
+        
+        const currentDateDisplay = document.getElementById('currentDateDisplay');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+
+        let cycleStartDate = localStorage.getItem('ev_full_cycle_start');
+        let dailyLogs = JSON.parse(localStorage.getItem('ev_full_daily_logs')) || [];
+        let simulatedDayOffset = parseInt(localStorage.getItem('ev_simulated_offset')) || 0;
+        let telemetryLogs = JSON.parse(localStorage.getItem('ev_telemetry_logs')) || {};
+        
+        let packCapacity = localStorage.getItem('ev_pack_capacity') || DEFAULT_CAPACITY;
+        capacityInput.value = packCapacity;
+
+        let chargeStartValue = localStorage.getItem('ev_charge_start') || DEFAULT_START_CHARGE;
+        chargeStartInput.value = chargeStartValue;
+
+        let chargeEndValue = localStorage.getItem('ev_charge_end') || DEFAULT_END_CHARGE;
+        chargeEndInput.value = chargeEndValue;
+
+        // Dynamic 24h Clock and D/M/Y Implementation
+        function updateClock() {
+            const now = new Date();
+            
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            currentDateDisplay.innerText = `${day}/${month}/${year}`;
+
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            currentTimeDisplay.innerText = `${hours}:${minutes}:${seconds}`;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        capacityInput.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (val === "" || val <= 0) val = DEFAULT_CAPACITY;
+            packCapacity = val;
+            localStorage.setItem('ev_pack_capacity', packCapacity);
+        });
+        capacityInput.addEventListener('click', (e) => { e.stopPropagation(); });
+
+        chargeStartInput.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (val === "") val = DEFAULT_START_CHARGE;
+            chargeStartValue = val;
+            localStorage.setItem('ev_charge_start', chargeStartValue);
+        });
+        chargeStartInput.addEventListener('click', (e) => { e.stopPropagation(); });
+
+        chargeEndInput.addEventListener('input', (e) => {
+            let val = e.target.value;
+            if (val === "") val = DEFAULT_END_CHARGE;
+            chargeEndValue = val;
+            localStorage.setItem('ev_charge_end', chargeEndValue);
+        });
+        chargeEndInput.addEventListener('click', (e) => { e.stopPropagation(); });
+
+        function focusCapacityInput() {
+            capacityInput.focus();
+            capacityInput.select();
+        }
+
+        function focusChargeStartInput() {
+            chargeStartInput.focus();
+            chargeStartInput.select();
+        }
+
+        function getTrackingDay() {
+            if (!cycleStartDate) return 0;
+            const start = new Date(cycleStartDate);
+            start.setHours(0,0,0,0);
+            const now = new Date();
+            now.setHours(0,0,0,0);
+            const diffTime = now - start;
+            return Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1 + simulatedDayOffset;
+        }
+
+        function buildRangeInputs() {
+            rangeGridContainer.innerHTML = '';
+            const currentDay = getTrackingDay();
+
+            for (let i = 1; i <= TOTAL_DAYS; i++) {
+                const row = document.createElement('div');
+                row.classList.add('day-row');
+                
+                if (i === currentDay && cycleStartDate && !isDayLogged(currentDay)) {
+                    row.classList.add('active-row');
+                }
+
+                const dayLabel = document.createElement('div');
+                dayLabel.classList.add('day-label');
+                dayLabel.innerText = `D${i}`;
+
+                if (!telemetryLogs[i]) telemetryLogs[i] = { kmLeft: '', kmMade: '' };
+
+                const fieldLeft = document.createElement('div');
+                fieldLeft.classList.add('sub-field');
+                fieldLeft.innerHTML = `<label>Left</label>`;
+                const inputLeft = document.createElement('input');
+                inputLeft.type = 'number';
+                inputLeft.placeholder = '--';
+                inputLeft.value = telemetryLogs[i].kmLeft || '';
+                inputLeft.addEventListener('input', (e) => {
+                    telemetryLogs[i].kmLeft = e.target.value;
+                    localStorage.setItem('ev_telemetry_logs', JSON.stringify(telemetryLogs));
+                });
+                fieldLeft.appendChild(inputLeft);
+                fieldLeft.insertAdjacentHTML('beforeend', '<span>km</span>');
+
+                const fieldMade = document.createElement('div');
+                fieldMade.classList.add('sub-field');
+                fieldMade.innerHTML = `<label>Made</label>`;
+                const inputMade = document.createElement('input');
+                inputMade.type = 'number';
+                inputMade.placeholder = '--';
+                inputMade.value = telemetryLogs[i].kmMade || '';
+                inputMade.addEventListener('input', (e) => {
+                    telemetryLogs[i].kmMade = e.target.value;
+                    localStorage.setItem('ev_telemetry_logs', JSON.stringify(telemetryLogs));
+                });
+                fieldMade.appendChild(inputMade);
+                fieldMade.insertAdjacentHTML('beforeend', '<span>km</span>');
+
+                if (!cycleStartDate || i > currentDay || isDayLogged(i)) {
+                    inputLeft.disabled = true;
+                    inputMade.disabled = true;
+                }
+
+                row.appendChild(dayLabel);
+                row.appendChild(fieldLeft);
+                row.appendChild(fieldMade);
+                rangeGridContainer.appendChild(row);
+            }
+        }
+
+        function formatLogDate(dateString) {
+            const date = new Date(dateString);
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            return `${day}/${month}/${year} ${hours}:${minutes}`;
+        }
+
+        function updateUI() {
+            container.innerHTML = '';
+            const currentDay = getTrackingDay();
+            
+            if (!cycleStartDate) {
+                statusText.innerText = "Initialize to log full range cell configuration over 10 days.";
+                startBtn.classList.remove('hidden');
+                logDayBtn.classList.add('hidden');
+                resetBtn.classList.add('hidden');
+                rangeLogSection.classList.add('hidden');
+                historySection.classList.add('hidden');
+            } else if (currentDay > TOTAL_DAYS) {
+                statusText.innerText = "🎉 10-Day Full Range Calibration Period Finished.";
+                startBtn.classList.add('hidden');
+                logDayBtn.classList.add('hidden');
+                resetBtn.remove('hidden');
+                rangeLogSection.classList.remove('hidden');
+                historySection.classList.remove('hidden');
+            } else {
+                statusText.innerText = `Full Calibration: Day ${currentDay} of ${TOTAL_DAYS}`;
+                startBtn.classList.add('hidden');
+                logDayBtn.classList.remove('hidden');
+                resetBtn.classList.remove('hidden');
+                rangeLogSection.classList.remove('hidden');
+                historySection.classList.remove('hidden');
+                
+                const currentSimulatedDateString = getSimulatedDate(currentDay).toDateString();
+                const alreadyLoggedToday = dailyLogs.some(log => new Date(log.date).toDateString() === currentSimulatedDateString);
+                
+                if (alreadyLoggedToday) {
+                    logDayBtn.disabled = true;
+                    if (currentDay < TOTAL_DAYS) {
+                        logDayBtn.innerText = `Day ${currentDay} Logged. Advance to Day ${currentDay + 1}`;
+                        logDayBtn.disabled = false; 
+                    } else {
+                        logDayBtn.innerText = "10-Day Cycle Complete!";
+                    }
+                } else {
+                    logDayBtn.disabled = false;
+                    logDayBtn.innerText = `Confirm Day ${currentDay} Full Cycle`;
+                }
+            }
+
+            for (let i = 0; i < TOTAL_DAYS; i++) {
+                const dot = document.createElement('div');
+                dot.classList.add('dot');
+                
+                const dotDayNumber = i + 1;
+                if (cycleStartDate) {
+                    if (dotDayNumber < currentDay || (dotDayNumber === currentDay && isDayLogged(dotDayNumber))) {
+                        dot.classList.add('completed');
+                        dot.innerHTML = '&#10003;';
+                    } else if (dotDayNumber === currentDay) {
+                        dot.classList.add('active');
+                        dot.innerText = dotDayNumber;
+                    } else {
+                        dot.innerText = dotDayNumber;
+                    }
+                } else {
+                    dot.innerText = dotDayNumber;
+                }
+                container.appendChild(dot);
+            }
+
+            buildRangeInputs();
+
+            historyContainer.innerHTML = '';
+            if (dailyLogs.length === 0 && cycleStartDate) {
+                historyContainer.innerHTML = `<div class="history-item" style="color: var(--text-muted); justify-content: center;">No entries verified yet.</div>`;
+            } else {
+                dailyLogs.forEach(log => {
+                    const item = document.createElement('div');
+                    item.classList.add('history-item');
+                    
+                    const leftStr = log.kmLeft ? `${log.kmLeft}km left` : '--';
+                    const madeStr = log.kmMade ? `${log.kmMade}km made` : '--';
+                    
+                    item.innerHTML = `<span>Day ${log.day} Session <span style="color:var(--primary); font-weight:bold;">(${leftStr} / ${madeStr})</span></span> <strong style="color: var(--text-muted); font-size:0.8rem;">${formatLogDate(log.date)}</strong>`;
+                    historyContainer.appendChild(item);
+                });
+            }
+        }
+
+        function isDayLogged(dayNum) {
+            return dailyLogs.some(log => log.day === dayNum);
+        }
+
+        function getSimulatedDate(dayNum) {
+            const date = cycleStartDate ? new Date(cycleStartDate) : new Date();
+            date.setDate(date.getDate() + dayNum - 1);
+            return date;
+        }
+
+        function startTracking() {
+            cycleStartDate = new Date().toISOString();
+            dailyLogs = [];
+            simulatedDayOffset = 0;
+            telemetryLogs = {};
+            localStorage.setItem('ev_full_cycle_start', cycleStartDate);
+            localStorage.setItem('ev_full_daily_logs', JSON.stringify(dailyLogs));
+            localStorage.setItem('ev_simulated_offset', simulatedDayOffset);
+            localStorage.setItem('ev_telemetry_logs', JSON.stringify(telemetryLogs));
+            updateUI();
+        }
+
+        function logDailyMetrics() {
+            const currentDay = getTrackingDay();
+            
+            if (!isDayLogged(currentDay)) {
+                // Captures localized accurate 24-hour baseline system execution time
+                const actualLogTimestamp = new Date().toISOString();
+                const currentData = telemetryLogs[currentDay] || { kmLeft: '', kmMade: '' };
+                
+                dailyLogs.push({
+                    day: currentDay,
+                    date: actualLogTimestamp,
+                    kmLeft: currentData.kmLeft,
+                    kmMade: currentData.kmMade
+                });
+                localStorage.setItem('ev_full_daily_logs', JSON.stringify(dailyLogs));
+            } else {
+                simulatedDayOffset++;
+                localStorage.setItem('ev_simulated_offset', simulatedDayOffset);
+            }
+            
+            updateUI();
+        }
+
+        function resetTracking() {
+            if (confirm("Reset current cycle logs? Progressive historical entries will be completely wiped out.")) {
+                localStorage.removeItem('ev_full_cycle_start');
+                localStorage.removeItem('ev_full_daily_logs');
+                localStorage.removeItem('ev_simulated_offset');
+                localStorage.removeItem('ev_telemetry_logs');
+                localStorage.removeItem('ev_pack_capacity');
+                localStorage.removeItem('ev_charge_start');
+                localStorage.removeItem('ev_charge_end');
+                cycleStartDate = null;
+                dailyLogs = [];
+                simulatedDayOffset = 0;
+                telemetryLogs = {};
+                packCapacity = DEFAULT_CAPACITY;
+                capacityInput.value = DEFAULT_CAPACITY;
+                chargeStartValue = DEFAULT_START_CHARGE;
+                chargeStartInput.value = DEFAULT_START_CHARGE;
+                chargeEndValue = DEFAULT_END_CHARGE;
+                chargeEndInput.value = DEFAULT_END_CHARGE;
+                updateUI();
+            }
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>
